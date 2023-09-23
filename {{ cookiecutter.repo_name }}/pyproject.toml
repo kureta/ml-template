@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "{{ cookiecutter.project_name }}"
+description = "A collection of tools for deep learning powered multimedia projects."
+readme = "README.md"
+license = { text = "MIT" }
+version = "0.1.0"
+requires-python = ">=3.8"
+authors = [
+  { name = "{{ cookiecutter.author_name }}", email = "{{ cookiecutter.author_email }}" },
+]
+dependencies = [
+  "torch ~= 2.0.1",
+  "torchvision ~= 0.15.2",
+  "torchaudio ~= 2.0.2",
+  "numpy ~= 1.24.4",
+  "matplotlib ~= 3.7.2",
+  "jupyterlab ~= 4.0.5",
+  "lightning[extras] ~= 2.0.8",
+]
+
+[project.urls]
+"Homepage" = "{{ cookiecutter.homepage }}"

@@ -1,0 +1,4 @@
+.idea/
+*.egg-info/
+.ipynb_checkpoints/
+.cache/

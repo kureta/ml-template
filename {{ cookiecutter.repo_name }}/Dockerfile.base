@@ -1,0 +1,47 @@
+# base cuda image
+FROM nvidia/cuda:11.7.1-cudnn8-runtime-ubuntu20.04
+
+# install python
+RUN --mount=type=cache,target=/var/cache/apt \
+  apt-get update && apt-get install -y --no-install-recommends \
+  python3=3.8.2-0ubuntu2 \
+  python3-pip=20.0.2-5ubuntu1.9 \
+  python3-venv=3.8.2-0ubuntu2 \
+  && \
+  rm -rf /var/lib/apt/lists/
+# ===========================
+
+# setup user
+ARG USER=dev
+ARG GROUP=dev
+ARG UID=1000
+ARG GID=1000
+
+ENV UID=${UID}
+ENV GID=${GID}
+ENV USER=${USER}
+ENV GROUP=${GROUP}
+
+RUN addgroup --gid ${GID} ${GROUP} && \
+  adduser --disabled-password --uid ${UID} --gid ${GID} ${USER}
+USER $USER
+
+# setup workdir
+ENV HOME=/home/$USER
+ENV PATH=$HOME/.local/bin:$PATH
+WORKDIR $HOME/app
+# ===========================
+
+# setup virtual environment
+ENV VIRTUAL_ENV=$HOME/.venv
+RUN --mount=type=cache,target=$HOME/.cache/pip,uid=${UID},gid=${GID} \
+  python3 -m venv $VIRTUAL_ENV
+ENV PATH=$VIRTUAL_ENV/bin:$PATH
+
+# update pip
+RUN --mount=type=cache,target=$HOME/.cache/pip,uid=${UID},gid=${GID} \
+  pip install --user --upgrade pip~=23.2.1 wheel~=0.41.2 setuptools~=68.2.2
+# ===========================
+
+# default command
+CMD [ "bash" ] 

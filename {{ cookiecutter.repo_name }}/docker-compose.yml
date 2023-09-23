@@ -1,0 +1,21 @@
+version: "3.8"
+
+services:
+  jupyter:
+    image: {{ cookiecutter.registry_name }}/{{ cookiecutter.repo_name }}:0.1.0
+    container_name: {{ cookiecutter.repo_name }}-jupyter
+    volumes:
+      - type: bind
+        source: ./
+        target: /home/dev/app
+    ports:
+      - "8888:8888"
+    working_dir: /home/dev/app
+    command: jupyter lab --no-browser --ip "*"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

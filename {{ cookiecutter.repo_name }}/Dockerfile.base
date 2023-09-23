@@ -40,7 +40,7 @@ ENV PATH=$VIRTUAL_ENV/bin:$PATH
 
 # update pip
 RUN --mount=type=cache,target=$HOME/.cache/pip,uid=${UID},gid=${GID} \
-  pip install --user --upgrade pip~=23.2.1 wheel~=0.41.2 setuptools~=68.2.2
+  pip install --upgrade pip~=23.2.1 wheel~=0.41.2 setuptools~=68.2.2
 # ===========================
 
 # default command

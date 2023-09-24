@@ -1,5 +1,6 @@
 # base cuda image
-FROM {{ cookiecutter.registry_name }}/ml-base:0.1.0
+ARG BASE_IMAGE_VERSION
+FROM {{ cookiecutter.registry_name }}/ml-base:${BASE_IMAGE_VERSION}
 
 # install system dependencies
 # If you need to install system dependencies, uncomment the following lines

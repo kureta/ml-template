@@ -12,15 +12,10 @@ RUN --mount=type=cache,target=/var/cache/apt \
 # ===========================
 
 # setup user
-ARG USER=dev
-ARG GROUP=dev
-ARG UID=1000
-ARG GID=1000
-
-ENV UID=${UID}
-ENV GID=${GID}
-ENV USER=${USER}
-ENV GROUP=${GROUP}
+ENV UID=1000
+ENV GID=1000
+ENV USER=dev
+ENV GROUP=dev
 
 RUN addgroup --gid ${GID} ${GROUP} && \
   adduser --disabled-password --uid ${UID} --gid ${GID} ${USER}

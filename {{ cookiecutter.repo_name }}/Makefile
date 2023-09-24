@@ -62,4 +62,4 @@ run:
 		$(registry_name)/$(repo_name):$(IMAGE_VERSION)
 
 jupyter: $(build_dir)/build
-	docker compose up
+	docker compose up && docker compose rm -fsv

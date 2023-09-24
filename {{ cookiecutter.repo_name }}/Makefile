@@ -2,8 +2,8 @@
 	#
 # Get image IMAGE_VERSIONs from .env file
 ifneq (,$(wildcard ./.env))
-	include .env
-	export
+  include .env
+  export
 endif
 # Set default image IMAGE_VERSIONs if .env file is not present
 BASE_IMAGE_IMAGE_VERSION ?= 0.1.0
@@ -18,8 +18,8 @@ build_dir := ./.cache
 # copy template.env to .env if .env does not exist
 .env:
 	cp template.env .env
-	include .env
-	export
+  include .env
+  export
 
 # create build directory
 $(build_dir): .env

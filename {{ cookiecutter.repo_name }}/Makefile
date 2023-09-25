@@ -1,3 +1,5 @@
+# set MLFLOW_TRACKING_URI, MLFLOW_TRACKING_USERNAME, MLFLOW_TRACKING_PASSWORD
+# make an mlflow action
 .PHONY: init build_base build build_test push run jupyter test all clean
 .DEFAULT_GOAL := all
 

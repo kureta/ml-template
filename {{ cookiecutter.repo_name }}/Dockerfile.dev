@@ -1,0 +1,36 @@
+# base cuda image
+ARG IMAGE_VERSION
+FROM {{ cookiecutter.registry_name }}/{{ cookiecutter.repo_name }}:${IMAGE_VERSION}
+
+# install system dependencies
+# If you need to install system dependencies, uncomment the following lines
+# and add your dependencies
+# ===========================
+USER root
+RUN --mount=type=cache,target=/var/cache/apt \
+  mkdir -p /var/cache/apt/lists/partial && \
+  apt-get update && apt-get install -y --no-install-recommends \
+  git \
+  neovim \
+  && \
+  rm -rf /var/lib/apt/lists/
+# ===========================
+
+# setup user
+WORKDIR $HOME/app
+USER $USER
+# ===========================
+
+# install dependencies
+RUN --mount=type=cache,target=$HOME/.cache/pip,uid=$UID,gid=$GID \
+  pip install -r requirements.dev.txt
+# ===========================
+
+# set up git and dvc repos
+RUN --mount=type=cache,target=$HOME/.cache/git,uid=$UID,gid=$GID \
+  git config --global user.email "{{ cookiecutter.author_email }}" user.name "{{ cookiecutter.author_name }}" && \
+  git init && \
+  dvc init && \
+  dvc remote add -d storage {{ cookiecutter.dvc_bucket }} && \
+  dvc remote modify storage endpointurl {{ cookiecutter.dvc_endpoint }} && \
+  dvc config core.autostage true

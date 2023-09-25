@@ -1,4 +1,4 @@
-.PHONY: init build_base build build_test push run jupyter test all clean
+.PHONY: init build_base build_app build_dev build_test build push_base push_app push_dev push_test build run jupyter test all clean
 .DEFAULT_GOAL := all
 
 # Get image versions from .env file
@@ -9,12 +9,11 @@ endif
 
 # build cache to store last successful build times
 BUILD_DIR := ./.cache
-# venv for installing pre-commit and nbstripout
-VENV_ACTIVATE = . .venv/bin/activate
 # image names
 BASE_IMAGE_NAME := ml-base
 IMAGE_NAME := {{ cookiecutter.repo_name }}
 TEST_IMAGE_NAME := $(IMAGE_NAME)-test
+DEV_IMAGE_NAME := $(IMAGE_NAME)-dev
 # docker repository to push the image
 DOCKER_REGISTRY := {{ cookiecutter.registry_name }}
 
@@ -28,22 +27,6 @@ DOCKER_REGISTRY := {{ cookiecutter.registry_name }}
 $(BUILD_DIR): .env
 	mkdir -p $@
 
-# initialize development tools at the host machine
-.venv: requirements.dev.txt
-	rm -rf .venv
-	python -m venv .venv
-	$(VENV_ACTIVATE) && pip install -r requirements.dev.txt
-
-$(BUILD_DIR)/init: .venv $(BUILD_DIR)
-	$(VENV_ACTIVATE) && pre-commit install
-	$(VENV_ACTIVATE) && nbstripout --install
-	touch $@
-
-.git:
-	git init
-
-init: .git $(BUILD_DIR)/init
-
 $(BUILD_DIR)/build_base: Dockerfile.base | $(BUILD_DIR)
 	docker build \
 		--tag $(DOCKER_REGISTRY)/$(BASE_IMAGE_NAME):$(BASE_IMAGE_VERSION) \
@@ -51,7 +34,7 @@ $(BUILD_DIR)/build_base: Dockerfile.base | $(BUILD_DIR)
 		-f Dockerfile.base .
 	touch $@
 
-$(BUILD_DIR)/build: Dockerfile pyproject.toml $(BUILD_DIR)/build_base
+$(BUILD_DIR)/build_app: Dockerfile pyproject.toml $(BUILD_DIR)/build_base
 	docker build \
 		--build-arg BASE_IMAGE_VERSION=$(BASE_IMAGE_VERSION) \
 		--tag $(DOCKER_REGISTRY)/$(IMAGE_NAME):$(IMAGE_VERSION) \
@@ -59,7 +42,7 @@ $(BUILD_DIR)/build: Dockerfile pyproject.toml $(BUILD_DIR)/build_base
 		-f Dockerfile .
 	touch $@
 
-$(BUILD_DIR)/build_test: $(BUILD_DIR)/build Dockerfile.test requirements.test.txt
+$(BUILD_DIR)/build_test: $(BUILD_DIR)/build_app Dockerfile.test requirements.test.txt
 	docker build \
 		--build-arg IMAGE_VERSION=$(IMAGE_VERSION) \
 		--tag $(DOCKER_REGISTRY)/$(TEST_IMAGE_NAME):$(IMAGE_VERSION)-test.$(TEST_VERSION) \
@@ -67,11 +50,19 @@ $(BUILD_DIR)/build_test: $(BUILD_DIR)/build Dockerfile.test requirements.test.tx
 		-f Dockerfile.test .
 	touch $@
 
+$(BUILD_DIR)/build_dev: $(BUILD_DIR)/build_app Dockerfile.dev requirements.dev.txt
+	docker build \
+		--build-arg IMAGE_VERSION=$(IMAGE_VERSION) \
+		--tag $(DOCKER_REGISTRY)/$(DEV_IMAGE_NAME):$(IMAGE_VERSION)-test.$(DEV_VERSION) \
+		--tag $(DOCKER_REGISTRY)/$(DEV_IMAGE_NAME):latest \
+		-f Dockerfile.test .
+	touch $@
+
 $(BUILD_DIR)/push_base: $(BUILD_DIR)/build_base
 	docker push -a $(DOCKER_REGISTRY)/$(BASE_IMAGE_NAME)
 	touch $@
 
-$(BUILD_DIR)/push: $(BUILD_DIR)/build
+$(BUILD_DIR)/push_app: $(BUILD_DIR)/build_app
 	docker push -a $(DOCKER_REGISTRY)/$(IMAGE_NAME)
 	touch $@
 
@@ -79,15 +70,23 @@ $(BUILD_DIR)/push_test: $(BUILD_DIR)/build_test
 	docker push -a $(DOCKER_REGISTRY)/$(TEST_IMAGE_NAME)
 	touch $@
 
+$(BUILD_DIR)/push_dev: $(BUILD_DIR)/build_dev
+	docker push -a $(DOCKER_REGISTRY)/$(DEV_IMAGE_NAME)
+	touch $@
+
 build_base: $(BUILD_DIR)/build_base
-
-build: $(BUILD_DIR)/build
-
+build_app: $(BUILD_DIR)/build_app
 build_test: $(BUILD_DIR)/build_test
+build_dev: $(BUILD_DIR)/build_dev
+push_base: $(BUILD_DIR)/push_base
+push_app: $(BUILD_DIR)/push_app
+push_test: $(BUILD_DIR)/push_test
+push_dev: $(BUILD_DIR)/push_dev
 
-push: $(BUILD_DIR)/push_base $(BUILD_DIR)/push $(BUILD_DIR)/push_test
+push: push_base push_app push_test push_dev
+build: build_base build_app build_test build_dev
 
-run: $(BUILD_DIR)/build
+run: $(BUILD_DIR)/build_app
 	docker run \
 		--mount type=bind,source="$(shell pwd)",target=/home/dev/app \
 		--name $(IMAGE_NAME) \
@@ -97,10 +96,10 @@ run: $(BUILD_DIR)/build
 		-it \
 		$(DOCKER_REGISTRY)/$(IMAGE_NAME):$(IMAGE_VERSION)
 
-jupyter: $(BUILD_DIR)/build
+jupyter: $(BUILD_DIR)/build_dev
 	docker run \
 		--mount type=bind,source="$(shell pwd)",target=/home/dev/app \
-		--name $(IMAGE_NAME)-jupyter \
+		--name $(DEV_IMAGE_NAME) \
 		--gpus all \
 		--ipc host \
 		-p 8888:8888 \
@@ -118,7 +117,7 @@ test: $(BUILD_DIR)/build_test
 		$(DOCKER_REGISTRY)/$(TEST_IMAGE_NAME):$(IMAGE_VERSION)-test.$(TEST_VERSION) \
 		cowsay -t "All tests passed!"
 
-all: build_base build build_test push
+all: build_base build_app build_test build_dev
 
 clean:
 	rm -rf $(BUILD_DIR)

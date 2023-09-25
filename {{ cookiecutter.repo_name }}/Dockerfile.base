@@ -39,4 +39,4 @@ RUN --mount=type=cache,target=$HOME/.cache/pip,uid=${UID},gid=${GID} \
 # ===========================
 
 # default command
-CMD [ "bash" ] 
+CMD [ "bash" ]

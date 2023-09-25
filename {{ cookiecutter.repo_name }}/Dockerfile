@@ -35,4 +35,4 @@ COPY --chown=$USER:$GROUP . .
 EXPOSE 8888
 
 # default command
-CMD [ "bash" ] 
+CMD [ "bash" ]

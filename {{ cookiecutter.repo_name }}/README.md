@@ -1,3 +1,5 @@
 # Welcome to {{ cookiecutter.project_name }}
 
-{{ cookiecutter.description }}
+# Welcome to {{ cookiecutter.project_name }}
+
+## {{ cookiecutter.description }}

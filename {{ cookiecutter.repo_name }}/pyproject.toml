@@ -13,6 +13,7 @@ authors = [
   { name = "{{ cookiecutter.author_name }}", email = "{{ cookiecutter.author_email }}" },
 ]
 dependencies = [
+  "dvc[all] ~= 3.22.0",
   "ipywidgets ~= 8.1.1",
   "jupyterlab ~= 4.0.5",
   "librosa ~= 0.10.0",

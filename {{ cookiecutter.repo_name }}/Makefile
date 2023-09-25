@@ -32,21 +32,25 @@ $(BUILD_DIR): .env
 .venv: requirements.dev.txt
 	rm -rf .venv
 	python -m venv .venv
-	$(VENV_ACTIVATE) && pip install -r requirements.dev.txt
+	$(VENV_ACTIVATE) && \
+	pip install -r requirements.dev.txt
 
 $(BUILD_DIR)/init: .venv $(BUILD_DIR)
-	$(VENV_ACTIVATE) && pre-commit install
-	$(VENV_ACTIVATE) && nbstripout --install
+	$(VENV_ACTIVATE) && \
+	pre-commit install && \
+	nbstripout --install
 	touch $@
 
 .git:
 	git init
 
 .dvc:
+	$(VENV_ACTIVATE) && \
 	dvc init && \
 	dvc remote add -d storage {{ cookiecutter.dvc_bucket }} && \
 	dvc remote modify storage endpointurl {{ cookiecutter.dvc_endpoint }} && \
-	dvc config core.autostage true
+	dvc config core.autostage true && \
+	dvc config core.analytics false
 
 init: .git $(BUILD_DIR)/init .dvc
 
@@ -124,7 +128,7 @@ test: $(BUILD_DIR)/build_test
 		$(DOCKER_REGISTRY)/$(TEST_IMAGE_NAME):$(IMAGE_VERSION)-test.$(TEST_VERSION) \
 		cowsay -t "All tests passed!"
 
-all: build_base build build_test push
+all: build_base build build_test
 
 clean:
 	rm -rf $(BUILD_DIR)

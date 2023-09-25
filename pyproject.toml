@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "ml-template"
+version = "0.1.0"
+description = "A cookiecutter template for machine learning projects."
+authors = ["kureta <skureta@gmail.com>"]
+license = "GPL"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+[tool.poetry.group.test.dependencies]
+pytest-cookies = "~0.7.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

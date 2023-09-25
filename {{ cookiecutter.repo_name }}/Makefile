@@ -1,19 +1,42 @@
-.PHONY: run build push clean all
-	#
+.PHONY: init build_base build build_test push run jupyter test all clean
+.DEFAULT_GOAL := all
+
 # Get image IMAGE_VERSIONs from .env file
 ifneq (,$(wildcard ./.env))
   include .env
   export
 endif
-# Set default image IMAGE_VERSIONs if .env file is not present
-BASE_IMAGE_IMAGE_VERSION ?= 0.1.0
-IMAGE_IMAGE_VERSION ?= 0.1.0
 
-.DEFAULT_GOAL := all
+# build cache to store last successful build times
+BUILD_DIR := ./.cache
+# venv for installing pre-commit and nbstripout
+VENV_ACTIVATE = . .venv/bin/activate
+# image names
+BASE_IMAGE_NAME := ml-base
+IMAGE_NAME := {{ cookiecutter.repo_name }}
+TEST_IMAGE_NAME := $(IMAGE_NAME)-test
+# docker repository to push the image
+DOCKER_REGISTRY := {{ cookiecutter.registry_name }}
 
-registry_name := {{ cookiecutter.registry_name }}
-repo_name := {{ cookiecutter.repo_name }}
-build_dir := ./.cache
+# initialize development tools at the host machine
+.venv: requirements.dev.txt
+	rm -rf .venv
+	python -m venv .venv
+	$(VENV_ACTIVATE) && pip install -r requirements.dev.txt
+
+# create build directory
+$(BUILD_DIR): .env
+	mkdir -p $@
+
+$(BUILD_DIR)/init: .venv $(BUILD_DIR)
+	$(VENV_ACTIVATE) && pre-commit install
+	$(VENV_ACTIVATE) && nbstripout --install
+	touch $@
+
+.git:
+	git init
+
+init: .git $(BUILD_DIR)/init
 
 # copy template.env to .env if .env does not exist
 .env:
@@ -21,52 +44,81 @@ build_dir := ./.cache
   include .env
   export
 
-# create build directory
-$(build_dir): .env
-	mkdir -p $@
-
-$(build_dir)/build_base: Dockerfile.base | $(build_dir)
+$(BUILD_DIR)/build_base: Dockerfile.base | $(BUILD_DIR)
 	docker build \
-		--tag $(registry_name)/ml-base:$(BASE_IMAGE_VERSION) \
-		--tag $(registry_name)/ml-base:latest \
+		--tag $(DOCKER_REGISTRY)/$(BASE_IMAGE_NAME):$(BASE_IMAGE_VERSION) \
+		--tag $(DOCKER_REGISTRY)/$(BASE_IMAGE_NAME):latest \
 		-f Dockerfile.base .
 	touch $@
 
-$(build_dir)/build: Dockerfile pyproject.toml $(build_dir)/build_base
+$(BUILD_DIR)/build: Dockerfile pyproject.toml $(BUILD_DIR)/build_base
 	docker build \
 		--build-arg BASE_IMAGE_VERSION=$(BASE_IMAGE_VERSION) \
-		--tag $(registry_name)/$(repo_name):$(IMAGE_VERSION) \
-		--tag $(registry_name)/$(repo_name):latest \
+		--tag $(DOCKER_REGISTRY)/$(IMAGE_NAME):$(IMAGE_VERSION) \
+		--tag $(DOCKER_REGISTRY)/$(IMAGE_NAME):latest \
 		-f Dockerfile .
 	touch $@
 
-$(build_dir)/push_base: $(build_dir)/build_base
-	docker push -a $(registry_name)/ml-base
+$(BUILD_DIR)/build_test: $(BUILD_DIR)/build Dockerfile.test requirements.test.txt
+	docker build \
+		--build-arg IMAGE_VERSION=$(IMAGE_VERSION) \
+		--tag $(DOCKER_REGISTRY)/$(TEST_IMAGE_NAME):$(IMAGE_VERSION)-test.$(TEST_VERSION) \
+		--tag $(DOCKER_REGISTRY)/$(TEST_IMAGE_NAME):latest \
+		-f Dockerfile.test .
 	touch $@
 
-$(build_dir)/push: $(build_dir)/build
-	docker push -a $(registry_name)/$(repo_name)
+$(BUILD_DIR)/push_base: $(BUILD_DIR)/build_base
+	docker push -a $(DOCKER_REGISTRY)/$(BASE_IMAGE_NAME)
 	touch $@
 
-build: $(build_dir)/build
+$(BUILD_DIR)/push: $(BUILD_DIR)/build
+	docker push -a $(DOCKER_REGISTRY)/$(IMAGE_NAME)
+	touch $@
 
-push: $(build_dir)/push_base $(build_dir)/push
+$(BUILD_DIR)/push_test: $(BUILD_DIR)/build_test
+	docker push -a $(DOCKER_REGISTRY)/$(TEST_IMAGE_NAME)
+	touch $@
 
-clean:
-	rm -rf $(build_dir)
+build_base: $(BUILD_DIR)/build_base
 
-all: build push
+build: $(BUILD_DIR)/build
 
-run:
+build_test: $(BUILD_DIR)/build_test
+
+push: $(BUILD_DIR)/push_base $(BUILD_DIR)/push $(BUILD_DIR)/push_test
+
+run: $(BUILD_DIR)/build
 	docker run \
 		--mount type=bind,source="$(shell pwd)",target=/home/dev/app \
-		--name $(repo_name) \
+		--name $(IMAGE_NAME) \
+		--gpus all \
+		--ipc host \
+		--rm \
+		-it \
+		$(DOCKER_REGISTRY)/$(IMAGE_NAME):$(IMAGE_VERSION)
+
+jupyter: $(BUILD_DIR)/build
+	docker run \
+		--mount type=bind,source="$(shell pwd)",target=/home/dev/app \
+		--name $(IMAGE_NAME)-jupyter \
 		--gpus all \
 		--ipc host \
 		-p 8888:8888 \
 		--rm \
-		-it \
-		$(registry_name)/$(repo_name):$(IMAGE_VERSION)
+		$(DOCKER_REGISTRY)/$(IMAGE_NAME):$(IMAGE_VERSION) \
+		jupyter lab --no-browser --ip "*"
 
-jupyter: $(build_dir)/build
-	docker compose up && docker compose rm -fsv
+test: $(BUILD_DIR)/build_test
+	docker run \
+		--mount type=bind,source="$(shell pwd)",target=/home/dev/app \
+		--name $(TEST_IMAGE_NAME) \
+		--gpus all \
+		--ipc host \
+		--rm \
+		$(DOCKER_REGISTRY)/$(TEST_IMAGE_NAME):$(IMAGE_VERSION)-test.$(TEST_VERSION) \
+		cowsay -t "All tests passed!"
+
+all: build_base build build_test push
+
+clean:
+	rm -rf $(BUILD_DIR)

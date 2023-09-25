@@ -1,0 +1,13 @@
+# base cuda image
+ARG IMAGE_VERSION
+FROM {{ cookiecutter.registry_name }}/{{ cookiecutter.repo_name }}:${IMAGE_VERSION}
+
+# setup user
+WORKDIR $HOME/app
+USER $USER
+# ===========================
+
+# install dependencies
+RUN --mount=type=cache,target=$HOME/.cache/pip,uid=$UID,gid=$GID \
+  pip install -r requirements.test.txt
+# ===========================

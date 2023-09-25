@@ -1,6 +1,6 @@
-.idea/
-*.egg-info/
-.ipynb_checkpoints/
 .cache/
-.env
+.git/
+.gitignore
+.idea/
+.ipynb_checkpoints/
 .venv/

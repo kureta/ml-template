@@ -5,5 +5,7 @@
   "author_name": "Your name (or your organization/company/team)",
   "author_email": "Your email address",
   "description": "A short description of the project.",
-  "registry_name": "[OPTIONAL] docker registry name (e.g. docker.io)"
+  "registry_name": "docker.io",
+  "dvc_bucket": "s3://{{ cookiecutter.repo_name }}",
+  "dvc_endpoint": "[Optional: S3 endpoint]"
 }

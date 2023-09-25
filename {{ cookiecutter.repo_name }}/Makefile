@@ -1,7 +1,7 @@
 .PHONY: init build_base build build_test push run jupyter test all clean
 .DEFAULT_GOAL := all
 
-# Get image IMAGE_VERSIONs from .env file
+# Get image versions from .env file
 ifneq (,$(wildcard ./.env))
   include .env
   export
@@ -18,15 +18,21 @@ TEST_IMAGE_NAME := $(IMAGE_NAME)-test
 # docker repository to push the image
 DOCKER_REGISTRY := {{ cookiecutter.registry_name }}
 
+# copy template.env to .env if .env does not exist
+.env:
+	cp template.env .env
+  include .env
+  export
+
+# create build directory
+$(BUILD_DIR): .env
+	mkdir -p $@
+
 # initialize development tools at the host machine
 .venv: requirements.dev.txt
 	rm -rf .venv
 	python -m venv .venv
 	$(VENV_ACTIVATE) && pip install -r requirements.dev.txt
-
-# create build directory
-$(BUILD_DIR): .env
-	mkdir -p $@
 
 $(BUILD_DIR)/init: .venv $(BUILD_DIR)
 	$(VENV_ACTIVATE) && pre-commit install
@@ -37,12 +43,6 @@ $(BUILD_DIR)/init: .venv $(BUILD_DIR)
 	git init
 
 init: .git $(BUILD_DIR)/init
-
-# copy template.env to .env if .env does not exist
-.env:
-	cp template.env .env
-  include .env
-  export
 
 $(BUILD_DIR)/build_base: Dockerfile.base | $(BUILD_DIR)
 	docker build \

@@ -7,6 +7,8 @@ WORKDIR $HOME/app
 USER $USER
 # ===========================
 
+# copy test dependencies
+COPY --chown=$USER:$GROUP ./requirements.test.txt ./requirements.test.txt
 # install dependencies
 RUN --mount=type=cache,target=$HOME/.cache/pip,uid=$UID,gid=$GID \
   pip install -r requirements.test.txt

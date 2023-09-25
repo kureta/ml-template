@@ -42,7 +42,13 @@ $(BUILD_DIR)/init: .venv $(BUILD_DIR)
 .git:
 	git init
 
-init: .git $(BUILD_DIR)/init
+.dvc:
+	dvc init && \
+	dvc remote add -d storage {{ cookiecutter.dvc_bucket }} && \
+	dvc remote modify storage endpointurl {{ cookiecutter.dvc_endpoint }} && \
+	dvc config core.autostage true
+
+init: .git $(BUILD_DIR)/init .dvc
 
 $(BUILD_DIR)/build_base: Dockerfile.base | $(BUILD_DIR)
 	docker build \
